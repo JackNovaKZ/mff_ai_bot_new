@@ -1,91 +1,132 @@
 import os
 import sys
 
-# === ОТЛАДКА ===
-print("=" * 50)
-print("🔍 DEBUG: Checking environment variables")
+# ========== ОТЛАДКА ПЕРЕМЕННЫХ ==========
+print("=" * 60)
+print("🔍 DEBUG START")
 
-# Получаем все переменные
-all_vars = dict(os.environ)
-print(f"Total env vars: {len(all_vars)}")
+# Проверяем все переменные
+env_vars = dict(os.environ)
+print(f"📊 Total environment variables: {len(env_vars)}")
 
-# Ищем BOT_TOKEN
-bot_token = os.getenv("BOT_TOKEN")
-print(f"BOT_TOKEN exists: {bool(bot_token)}")
-if bot_token:
-    print(f"BOT_TOKEN first 20 chars: {bot_token[:20]}...")
+# Выводим все переменные (скрываем значения)
+for key, value in env_vars.items():
+    if 'KEY' in key or 'TOKEN' in key or 'SECRET' in key:
+        print(f"  🔑 {key}: {'*' * 10}{value[-5:] if value else 'EMPTY'}")
+    else:
+        print(f"  📝 {key}: {value[:30] if value else 'EMPTY'}...")
 
-# Если нет токена - выходим
-if not bot_token:
-    print("❌ ERROR: BOT_TOKEN not found!")
+# Проверяем конкретно BOT_TOKEN
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+print(f"\n🎯 BOT_TOKEN found: {bool(BOT_TOKEN)}")
+if BOT_TOKEN:
+    print(f"✅ Token starts with: {BOT_TOKEN[:20]}...")
+else:
+    print("❌ ERROR: BOT_TOKEN is missing!")
     print("Please add BOT_TOKEN to Render Environment Variables")
     sys.exit(1)
 
-print("✅ BOT_TOKEN found!")
-print("=" * 50)
+print("🔍 DEBUG END")
+print("=" * 60)
 
-# === ОСНОВНОЙ КОД ===
+# ========== ОСНОВНОЙ КОД ==========
 import random
 import asyncio
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 
-bot = Bot(token=bot_token)
+bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-users = {}
+# Храним выбор пользователя
+user_choice = {}
 
+# Ответы для персонажей
 RESPONSES = {
     "Emily": [
         "Hi! I'm Emily from California! 😊",
-        "I love surfing! 🌊 Want to try?",
+        "I love surfing at the beach! 🌊",
+        "What's your favorite music?",
         "Nice weather today! ☀️",
-        "What's your favorite subject?",
-        "Do you have pets? I have a dog! 🐶"
+        "Do you have any pets?",
+        "How's school going?",
+        "Let's practice English together!",
+        "I like drawing and listening to pop music! 🎵",
+        "What do you do for fun?",
+        "Have an awesome day! 😄"
     ],
     "John": [
         "Hello! I'm John from London! ⚽",
-        "Football is the best sport!",
-        "Rainy day here in UK! ☔",
+        "Football is my favorite sport!",
+        "It's raining here today! ☔",
         "Do you play video games? 🎮",
-        "Cheers mate! How are you?"
+        "Cheers mate! How are you?",
+        "I support Chelsea FC!",
+        "What's your hobby?",
+        "Learning English is cool, right?",
+        "Do you like pizza? 🍕",
+        "Talk to you later! 😊"
     ]
 }
 
 @dp.message(Command("start"))
-async def start(message: types.Message):
+async def start_command(message: types.Message):
     await message.answer(
         "🇺🇸🇬🇧 **English Practice Bot**\n\n"
-        "Chat with:\n"
-        "/emily - American girl (13)\n"
-        "/john - British boy (12)\n\n"
-        "Just type in English!"
+        "Practice English by chatting with:\n\n"
+        "👧 /emily - American girl, 13 years old\n"
+        "👦 /john - British boy, 12 years old\n\n"
+        "Choose a friend and start chatting in English!"
     )
 
 @dp.message(Command("emily"))
-async def emily(message: types.Message):
-    users[message.from_user.id] = "Emily"
-    await message.answer("Hey there! I'm Emily! 😊\nWhat's your name?")
+async def emily_command(message: types.Message):
+    user_choice[message.from_user.id] = "Emily"
+    await message.answer(
+        "Hey there! 😊 I'm Emily!\n"
+        "I'm 13 years old and I live in San Diego, California.\n"
+        "I love surfing, drawing, and listening to music!\n\n"
+        "What's your name?"
+    )
 
 @dp.message(Command("john"))
-async def john(message: types.Message):
-    users[message.from_user.id] = "John"
-    await message.answer("Hello! I'm John! ⚽\nHow's your day?")
+async def john_command(message: types.Message):
+    user_choice[message.from_user.id] = "John"
+    await message.answer(
+        "Hello! ⚽ I'm John!\n"
+        "I'm 12 years old and I'm from London, England.\n"
+        "I play football, chess, and love video games!\n\n"
+        "How's your day going?"
+    )
 
 @dp.message()
-async def chat(message: types.Message):
+async def handle_message(message: types.Message):
     user_id = message.from_user.id
     
-    if user_id not in users:
-        await message.answer("Please choose /emily or /john")
+    # Пропускаем команды
+    if message.text.startswith('/'):
         return
     
-    char = users[user_id]
-    reply = random.choice(RESPONSES[char])
+    # Проверяем, выбрал ли пользователь персонажа
+    if user_id not in user_choice:
+        await message.answer(
+            "Please choose who you want to chat with:\n"
+            "/emily - American girl\n"
+            "/john - British boy"
+        )
+        return
+    
+    character = user_choice[user_id]
+    
+    # Выбираем случайный ответ
+    reply = random.choice(RESPONSES[character])
+    
+    # Отправляем ответ
     await message.answer(reply)
 
 async def main():
-    print("🤖 Bot starting polling...")
+    print("🤖 Telegram bot is starting...")
+    print("📱 Bot is ready! Find it in Telegram.")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
