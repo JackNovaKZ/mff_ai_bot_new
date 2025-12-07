@@ -1,33 +1,35 @@
 import os
 import sys
+import logging
+
+# ========== НАСТРОЙКА ЛОГИРОВАНИЯ ==========
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stdout  # Важно: выводим в stdout
+)
+logger = logging.getLogger(__name__)
 
 # ========== ОТЛАДКА ПЕРЕМЕННЫХ ==========
-print("=" * 60)
-print("🔍 DEBUG START")
+logger.info("=" * 60)
+logger.info("🔍 DEBUG START")
 
 # Проверяем все переменные
 env_vars = dict(os.environ)
-print(f"📊 Total environment variables: {len(env_vars)}")
-
-# Выводим все переменные (скрываем значения)
-for key, value in env_vars.items():
-    if 'KEY' in key or 'TOKEN' in key or 'SECRET' in key:
-        print(f"  🔑 {key}: {'*' * 10}{value[-5:] if value else 'EMPTY'}")
-    else:
-        print(f"  📝 {key}: {value[:30] if value else 'EMPTY'}...")
+logger.info(f"📊 Total environment variables: {len(env_vars)}")
 
 # Проверяем конкретно BOT_TOKEN
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-print(f"\n🎯 BOT_TOKEN found: {bool(BOT_TOKEN)}")
+logger.info(f"🎯 BOT_TOKEN found: {bool(BOT_TOKEN)}")
 if BOT_TOKEN:
-    print(f"✅ Token starts with: {BOT_TOKEN[:20]}...")
+    logger.info(f"✅ Token starts with: {BOT_TOKEN[:20]}...")
 else:
-    print("❌ ERROR: BOT_TOKEN is missing!")
-    print("Please add BOT_TOKEN to Render Environment Variables")
+    logger.error("❌ ERROR: BOT_TOKEN is missing!")
+    logger.error("Please add BOT_TOKEN to Render Environment Variables")
     sys.exit(1)
 
-print("🔍 DEBUG END")
-print("=" * 60)
+logger.info("🔍 DEBUG END")
+logger.info("=" * 60)
 
 # ========== ОСНОВНОЙ КОД ==========
 import random
@@ -35,8 +37,17 @@ import asyncio
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 
-bot = Bot(token=BOT_TOKEN)
+# Инициализируем бота с логами
+logger.info("🤖 Initializing bot...")
+try:
+    bot = Bot(token=BOT_TOKEN)
+    logger.info("✅ Bot initialized successfully")
+except Exception as e:
+    logger.error(f"❌ Bot initialization failed: {e}")
+    sys.exit(1)
+
 dp = Dispatcher()
+logger.info("✅ Dispatcher created")
 
 # Храним выбор пользователя
 user_choice = {}
@@ -71,6 +82,7 @@ RESPONSES = {
 
 @dp.message(Command("start"))
 async def start_command(message: types.Message):
+    logger.info(f"User {message.from_user.id} sent /start")
     await message.answer(
         "🇺🇸🇬🇧 **English Practice Bot**\n\n"
         "Practice English by chatting with:\n\n"
@@ -81,6 +93,7 @@ async def start_command(message: types.Message):
 
 @dp.message(Command("emily"))
 async def emily_command(message: types.Message):
+    logger.info(f"User {message.from_user.id} chose Emily")
     user_choice[message.from_user.id] = "Emily"
     await message.answer(
         "Hey there! 😊 I'm Emily!\n"
@@ -91,6 +104,7 @@ async def emily_command(message: types.Message):
 
 @dp.message(Command("john"))
 async def john_command(message: types.Message):
+    logger.info(f"User {message.from_user.id} chose John")
     user_choice[message.from_user.id] = "John"
     await message.answer(
         "Hello! ⚽ I'm John!\n"
@@ -107,6 +121,8 @@ async def handle_message(message: types.Message):
     if message.text.startswith('/'):
         return
     
+    logger.info(f"User {user_id} sent: {message.text[:50]}...")
+    
     # Проверяем, выбрал ли пользователь персонажа
     if user_id not in user_choice:
         await message.answer(
@@ -122,12 +138,21 @@ async def handle_message(message: types.Message):
     reply = random.choice(RESPONSES[character])
     
     # Отправляем ответ
+    logger.info(f"Bot ({character}) replied: {reply[:50]}...")
     await message.answer(reply)
 
 async def main():
-    print("🤖 Telegram bot is starting...")
-    print("📱 Bot is ready! Find it in Telegram.")
-    await dp.start_polling(bot)
+    logger.info("🚀 Starting Telegram bot polling...")
+    logger.info("📱 Bot is ready! Find it in Telegram.")
+    
+    try:
+        await dp.start_polling(bot)
+    except Exception as e:
+        logger.error(f"❌ Polling error: {e}")
+    finally:
+        logger.info("🛑 Bot stopped")
 
 if __name__ == "__main__":
+    # Явно запускаем asyncio с логированием
+    logger.info("🎬 Starting application...")
     asyncio.run(main())
